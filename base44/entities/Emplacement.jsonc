@@ -1,0 +1,84 @@
+{
+
+  "name": "Emplacement",
+
+  "type": "object",
+
+  "properties": {
+
+    "parcelle_id": {
+
+      "type": "string"
+
+    },
+
+    "placette_id": {
+
+      "type": "string"
+
+    },
+
+    "numero": {
+
+      "type": "integer"
+
+    },
+
+    "identifiant_stable": {
+
+      "type": "string"
+
+    }
+
+  },
+
+  "required": [
+
+    "parcelle_id",
+
+    "placette_id",
+
+    "numero",
+
+    "identifiant_stable"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "update": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

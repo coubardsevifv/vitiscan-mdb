@@ -1,0 +1,126 @@
+{
+
+  "name": "Prospection",
+
+  "type": "object",
+
+  "properties": {
+
+    "parcelle_id": {
+
+      "type": "string"
+
+    },
+
+    "annee": {
+
+      "type": "integer"
+
+    },
+
+    "utilisateur_id": {
+
+      "type": "string"
+
+    },
+
+    "utilisateur_nom": {
+
+      "type": "string"
+
+    },
+
+    "statut": {
+
+      "type": "string",
+
+      "enum": [
+
+        "a_faire",
+
+        "en_cours",
+
+        "terminee"
+
+      ],
+
+      "default": "a_faire"
+
+    },
+
+    "date_debut": {
+
+      "type": "string",
+
+      "format": "date-time"
+
+    },
+
+    "date_fin": {
+
+      "type": "string",
+
+      "format": "date-time"
+
+    }
+
+  },
+
+  "required": [
+
+    "parcelle_id",
+
+    "annee",
+
+    "statut"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "created_by_id": "{{user.id}}"
+
+    },
+
+    "update": {
+
+      "$or": [
+
+        {
+
+          "created_by_id": "{{user.id}}"
+
+        },
+
+        {
+
+          "user_condition": {
+
+            "role": "admin"
+
+          }
+
+        }
+
+      ]
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

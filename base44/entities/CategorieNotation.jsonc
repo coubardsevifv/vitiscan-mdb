@@ -1,0 +1,92 @@
+{
+
+  "name": "CategorieNotation",
+
+  "type": "object",
+
+  "properties": {
+
+    "code": {
+
+      "type": "string"
+
+    },
+
+    "libelle": {
+
+      "type": "string"
+
+    },
+
+    "couleur": {
+
+      "type": "string"
+
+    },
+
+    "ordre": {
+
+      "type": "integer"
+
+    },
+
+    "active": {
+
+      "type": "boolean",
+
+      "default": true
+
+    }
+
+  },
+
+  "required": [
+
+    "code",
+
+    "libelle",
+
+    "couleur",
+
+    "ordre"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "update": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

@@ -1,0 +1,106 @@
+{
+
+  "name": "Placette",
+
+  "type": "object",
+
+  "properties": {
+
+    "parcelle_id": {
+
+      "type": "string"
+
+    },
+
+    "numero": {
+
+      "type": "integer"
+
+    },
+
+    "rang": {
+
+      "type": "string"
+
+    },
+
+    "nombre_emplacements": {
+
+      "type": "integer"
+
+    },
+
+    "emplacement_debut": {
+
+      "type": "integer"
+
+    },
+
+    "emplacement_fin": {
+
+      "type": "integer"
+
+    },
+
+    "repere": {
+
+      "type": "string"
+
+    }
+
+  },
+
+  "required": [
+
+    "parcelle_id",
+
+    "numero",
+
+    "rang",
+
+    "nombre_emplacements",
+
+    "emplacement_debut",
+
+    "emplacement_fin"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "update": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

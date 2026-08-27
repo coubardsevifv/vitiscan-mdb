@@ -1,0 +1,122 @@
+{
+
+  "name": "Parcelle",
+
+  "type": "object",
+
+  "properties": {
+
+    "identifiant": {
+
+      "type": "string"
+
+    },
+
+    "nom": {
+
+      "type": "string"
+
+    },
+
+    "commune": {
+
+      "type": "string"
+
+    },
+
+    "cepage": {
+
+      "type": "string"
+
+    },
+
+    "latitude": {
+
+      "type": "number"
+
+    },
+
+    "longitude": {
+
+      "type": "number"
+
+    },
+
+    "exploitant": {
+
+      "type": "string"
+
+    },
+
+    "annee_entree": {
+
+      "type": "integer"
+
+    },
+
+    "informations": {
+
+      "type": "string"
+
+    },
+
+    "active": {
+
+      "type": "boolean",
+
+      "default": true
+
+    }
+
+  },
+
+  "required": [
+
+    "identifiant",
+
+    "nom",
+
+    "commune",
+
+    "cepage"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "update": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

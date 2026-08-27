@@ -1,0 +1,152 @@
+{
+
+  "name": "Notation",
+
+  "type": "object",
+
+  "properties": {
+
+    "prospection_id": {
+
+      "type": "string"
+
+    },
+
+    "parcelle_id": {
+
+      "type": "string"
+
+    },
+
+    "placette_id": {
+
+      "type": "string"
+
+    },
+
+    "emplacement_id": {
+
+      "type": "string"
+
+    },
+
+    "numero_emplacement": {
+
+      "type": "integer"
+
+    },
+
+    "rang": {
+
+      "type": "string"
+
+    },
+
+    "annee": {
+
+      "type": "integer"
+
+    },
+
+    "code": {
+
+      "type": "string"
+
+    },
+
+    "utilisateur_id": {
+
+      "type": "string"
+
+    },
+
+    "utilisateur_nom": {
+
+      "type": "string"
+
+    },
+
+    "date_saisie": {
+
+      "type": "string",
+
+      "format": "date-time"
+
+    },
+
+    "hors_ligne": {
+
+      "type": "boolean",
+
+      "default": false
+
+    }
+
+  },
+
+  "required": [
+
+    "prospection_id",
+
+    "parcelle_id",
+
+    "placette_id",
+
+    "emplacement_id",
+
+    "numero_emplacement",
+
+    "annee",
+
+    "code"
+
+  ],
+
+  "rls": {
+
+    "read": {},
+
+    "create": {
+
+      "created_by_id": "{{user.id}}"
+
+    },
+
+    "update": {
+
+      "$or": [
+
+        {
+
+          "created_by_id": "{{user.id}}"
+
+        },
+
+        {
+
+          "user_condition": {
+
+            "role": "admin"
+
+          }
+
+        }
+
+      ]
+
+    },
+
+    "delete": {
+
+      "user_condition": {
+
+        "role": "admin"
+
+      }
+
+    }
+
+  }
+
+}
+

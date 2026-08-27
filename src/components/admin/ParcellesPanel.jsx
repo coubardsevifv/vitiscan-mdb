@@ -1,0 +1,7 @@
+import { useEffect, useState } from "react";
+
+import { base44 } from "@/api/base44Client";
+
+import ParcelleForm from "@/components/admin/ParcelleForm";
+
+export default function ParcellesPanel(){const [rows,setRows]=useState([]),[show,setShow]=useState(false),load=()=>base44.entities.Parcelle.list("identifiant").then(setRows);useEffect(load,[]);const toggle=async p=>{await base44.entities.Parcelle.update(p.id,{active:!p.active});load()};return <div><div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-bold">Parcelles ({rows.length})</h2><button onClick={()=>setShow(!show)} className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-bold text-white">{show?"Fermer":"Créer une parcelle"}</button></div>{show&&<div className="mb-6 border-b pb-6"><ParcelleForm onCreated={()=>{setShow(false);load()}}/></div>}<div className="divide-y rounded-xl border">{rows.map(p=><div key={p.id} className="flex items-center gap-3 p-3"><div className="flex-1"><b>{p.identifiant} · {p.nom}</b><p className="text-sm text-slate-500">{p.commune} · {p.cepage}</p></div><button onClick={()=>toggle(p)} className={`rounded-full px-3 py-1 text-xs font-bold ${p.active?"bg-emerald-100 text-emerald-800":"bg-slate-100 text-slate-500"}`}>{p.active?"Active":"Désactivée"}</button></div>)}</div>{!rows.length&&!show&&<p className="py-8 text-center text-slate-500">Aucune parcelle. Créez la première.</p>}</div>}
