@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import { Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/base44Client";
 
 import { Button } from "@/components/ui/button";
 
@@ -12,11 +12,7 @@ import { Label } from "@/components/ui/label";
 
 import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
 
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-
 import AuthLayout from "@/components/AuthLayout";
-
-import GoogleIcon from "@/components/GoogleIcon";
 
 import { toast } from "@/components/ui/use-toast";
 
@@ -34,9 +30,7 @@ export default function Register() {
 
   const [loading, setLoading] = useState(false);
 
-  const [showOtp, setShowOtp] = useState(false);
-
-  const [otpCode, setOtpCode] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSubmit = async (e) => {
 
@@ -56,43 +50,23 @@ export default function Register() {
 
     try {
 
-      await base44.auth.register({ email, password });
+      const { error } = await supabase.auth.signUp({
 
-      setShowOtp(true);
+        email,
+
+        password,
+
+        options: { emailRedirectTo: `${window.location.origin}${safeReturnTo()}` },
+
+      });
+
+      if (error) throw error;
+
+      setShowConfirm(true);
 
     } catch (err) {
 
       setError(err.message || "Registration failed");
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
-
-  const handleVerify = async () => {
-
-    setError("");
-
-    setLoading(true);
-
-    try {
-
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-
-      if (result?.access_token) {
-
-        base44.auth.setToken(result.access_token);
-
-      }
-
-      window.location.href = safeReturnTo();
-
-    } catch (err) {
-
-      setError(err.message || "Invalid verification code");
 
     } finally {
 
@@ -108,31 +82,27 @@ export default function Register() {
 
     try {
 
-      await base44.auth.resendOtp(email);
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+
+      if (error) throw error;
 
       toast({
 
-        title: "Code envoyé",
+        title: "Email envoyé",
 
-        description: "Consultez votre messagerie pour obtenir le nouveau code.",
+        description: "Consultez votre messagerie pour retrouver le lien de confirmation.",
 
       });
 
     } catch (err) {
 
-      setError(err.message || "Failed to resend code");
+      setError(err.message || "Failed to resend email");
 
     }
 
   };
 
-  const handleGoogle = () => {
-
-    base44.auth.loginWithProvider("google", safeReturnTo());
-
-  };
-
-  if (showOtp) {
+  if (showConfirm) {
 
     return (
 
@@ -142,7 +112,7 @@ export default function Register() {
 
         title="Vérifiez votre adresse email"
 
-        subtitle={`Un code a été envoyé à ${email}`}
+        subtitle={`Un email de confirmation a été envoyé à ${email}`}
 
       >
 
@@ -156,73 +126,15 @@ export default function Register() {
 
         )}
 
-        <div className="flex justify-center mb-6">
+        <p className="text-sm text-foreground text-center mb-6">
 
-          <InputOTP
+          Cliquez sur le lien reçu par email pour activer votre compte, puis connectez-vous.
 
-            maxLength={6}
+        </p>
 
-            value={otpCode}
+        <p className="text-center text-sm text-muted-foreground">
 
-            onChange={setOtpCode}
-
-            autoFocus
-
-            autoComplete="one-time-code"
-
-          >
-
-            <InputOTPGroup>
-
-              <InputOTPSlot index={0} />
-
-              <InputOTPSlot index={1} />
-
-              <InputOTPSlot index={2} />
-
-              <InputOTPSlot index={3} />
-
-              <InputOTPSlot index={4} />
-
-              <InputOTPSlot index={5} />
-
-            </InputOTPGroup>
-
-          </InputOTP>
-
-        </div>
-
-        <Button
-
-          className="w-full h-12 font-medium"
-
-          onClick={handleVerify}
-
-          disabled={loading || otpCode.length < 6}
-
-        >
-
-          {loading ? (
-
-            <>
-
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-
-              Vérification…
-
-            </>
-
-          ) : (
-
-            "Vérifier"
-
-          )}
-
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground mt-4">
-
-          Vous n’avez pas reçu le code ?{" "}
+          Vous n’avez pas reçu l’email ?{" "}
 
           <button onClick={handleResend} className="text-primary font-medium hover:underline">
 
@@ -271,38 +183,6 @@ export default function Register() {
       }
 
     >
-
-      <Button
-
-        variant="outline"
-
-        className="w-full h-12 text-sm font-medium mb-6"
-
-        onClick={handleGoogle}
-
-      >
-
-        <GoogleIcon className="w-5 h-5 mr-2" />
-
-        Continuer avec Google
-
-      </Button>
-
-      <div className="relative mb-6">
-
-        <div className="absolute inset-0 flex items-center">
-
-          <div className="w-full border-t border-border" />
-
-        </div>
-
-        <div className="relative flex justify-center text-xs uppercase">
-
-          <span className="bg-card px-3 text-muted-foreground">ou</span>
-
-        </div>
-
-      </div>
 
       {error && (
 

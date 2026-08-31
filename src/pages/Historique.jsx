@@ -1,0 +1,5 @@
+import { useEffect, useState } from "react";
+
+import { Parcelle, Notation } from "@/api/entities";
+
+export default function Historique(){const [rows,setRows]=useState([]);useEffect(()=>{(async()=>{const [p,n]=await Promise.all([Parcelle.list(),Notation.list("-annee")]);const map={};n.forEach(x=>{const k=`${x.parcelle_id}-${x.annee}`;map[k]=(map[k]||0)+1});setRows(Object.entries(map).map(([k,count])=>{const [id,year]=k.split(/-(?=\d{4}$)/);return{p:p.find(x=>x.id===id),year,count}}).filter(x=>x.p))})()},[]);return <section><h1 className="mb-5 text-2xl font-black">Historique</h1><div className="space-y-3">{rows.map((x,i)=><div key={i} className="flex items-center justify-between rounded-2xl border bg-white p-4"><div><p className="font-bold">{x.p.identifiant} · {x.p.nom}</p><p className="text-sm text-slate-500">Campagne {x.year}</p></div><span className="font-bold text-emerald-700">{x.count} notations</span></div>)}</div>{!rows.length&&<p className="rounded-2xl border border-dashed p-8 text-center text-slate-500">Aucun historique disponible.</p>}</section>}

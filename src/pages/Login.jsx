@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import { Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/base44Client";
 
 import { Button } from "@/components/ui/button";
 
@@ -13,8 +13,6 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 
 import AuthLayout from "@/components/AuthLayout";
-
-import GoogleIcon from "@/components/GoogleIcon";
 
 import { safeReturnTo } from "@/lib/authReturnTo";
 
@@ -44,7 +42,9 @@ export default function Login() {
 
     try {
 
-      await base44.auth.loginViaEmailPassword(email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) throw error;
 
       window.location.href = returnTo;
 
@@ -57,12 +57,6 @@ export default function Login() {
       setLoading(false);
 
     }
-
-  };
-
-  const handleGoogle = () => {
-
-    base44.auth.loginWithProvider("google", returnTo);
 
   };
 
@@ -99,38 +93,6 @@ export default function Login() {
       }
 
     >
-
-      <Button
-
-        variant="outline"
-
-        className="w-full h-12 text-sm font-medium mb-6"
-
-        onClick={handleGoogle}
-
-      >
-
-        <GoogleIcon className="w-5 h-5 mr-2" />
-
-        Continuer avec Google
-
-      </Button>
-
-      <div className="relative mb-6">
-
-        <div className="absolute inset-0 flex items-center">
-
-          <div className="w-full border-t border-border" />
-
-        </div>
-
-        <div className="relative flex justify-center text-xs uppercase">
-
-          <span className="bg-card px-3 text-muted-foreground">ou</span>
-
-        </div>
-
-      </div>
 
       {error && (
 

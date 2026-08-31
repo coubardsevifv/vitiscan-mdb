@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { Parcelle, Placette, Emplacement, Notation } from "@/api/entities";
 
 import { MapPin, Layers, Grid3x3, FileSpreadsheet, Upload, Download } from "lucide-react";
 
@@ -36,9 +36,9 @@ export default function AdminDashboard() {
 
       const [parcelles, placettes, emplacements, n2025, n2026] = await Promise.all([
 
-        base44.entities.Parcelle.list(), base44.entities.Placette.list(), base44.entities.Emplacement.list(),
+        Parcelle.list(), Placette.list(), Emplacement.list(),
 
-        base44.entities.Notation.filter({ annee: 2025 }), base44.entities.Notation.filter({ annee: 2026 }),
+        Notation.filter({ annee: 2025 }), Notation.filter({ annee: 2026 }),
 
       ]);
 

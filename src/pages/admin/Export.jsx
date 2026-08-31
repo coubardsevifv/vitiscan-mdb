@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { Notation, Parcelle } from "@/api/entities";
 
 import { Download } from "lucide-react";
 
@@ -6,7 +6,7 @@ export default function AdminExport() {
 
   const exportCsv = async () => {
 
-    const [n, p] = await Promise.all([base44.entities.Notation.list(), base44.entities.Parcelle.list()]);
+    const [n, p] = await Promise.all([Notation.list(), Parcelle.list()]);
 
     const lines = [["Année", "Parcelle", "Placette", "Rang", "Emplacement", "Notation", "Utilisateur", "Date"],
 

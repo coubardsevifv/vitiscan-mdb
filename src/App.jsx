@@ -12,8 +12,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-
 import ScrollToTop from './components/ScrollToTop';
 
 import MobileLayout from '@/components/MobileLayout';
@@ -54,11 +52,11 @@ import AdminUsers from '@/pages/admin/Users';
 
 const AuthenticatedApp = () => {
 
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, authChecked } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
+  // Show loading spinner while checking auth
 
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  if (isLoadingAuth || !authChecked) {
 
     return (
 
@@ -69,24 +67,6 @@ const AuthenticatedApp = () => {
       </div>
 
     );
-
-  }
-
-  // Handle authentication errors
-
-  if (authError) {
-
-    if (authError.type === 'user_not_registered') {
-
-      return <UserNotRegisteredError />;
-
-    } else if (authError.type === 'auth_required' && !['/login','/register','/forgot-password','/reset-password'].includes(window.location.pathname)) {
-
-      navigateToLogin();
-
-      return null;
-
-    }
 
   }
 

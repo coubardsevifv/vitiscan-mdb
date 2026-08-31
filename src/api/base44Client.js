@@ -1,24 +1,18 @@
-import { createClient } from '@base44/sdk';
+import { createClient } from '@supabase/supabase-js';
 
-import { appParams } from '@/lib/app-params';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const { appId, token, functionsVersion, appBaseUrl } = appParams;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY environment variables. See .env.local.'
+  );
+}
 
-//Create a client with authentication required
-
-export const base44 = createClient({
-
-  appId,
-
-  token,
-
-  functionsVersion,
-
-  serverUrl: '',
-
-  requiresAuth: false,
-
-  appBaseUrl
-
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
 });
-

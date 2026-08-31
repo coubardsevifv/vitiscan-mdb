@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import { Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/base44Client";
 
 import { Button } from "@/components/ui/button";
 
@@ -30,7 +30,11 @@ export default function ForgotPassword() {
 
     try {
 
-      await base44.auth.resetPasswordRequest(email);
+      await supabase.auth.resetPasswordForEmail(email, {
+
+        redirectTo: `${window.location.origin}/reset-password`,
+
+      });
 
     } catch {
 

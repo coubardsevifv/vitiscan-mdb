@@ -1,6 +1,8 @@
 import * as XLSX from "xlsx";
 
-import { base44 } from "@/api/base44Client";
+import { Parcelle, Placette, Emplacement, Prospection, Notation, CategorieNotation } from "@/api/entities";
+
+import { getCurrentUser } from "@/api/auth";
 
 export const YEAR_IMPORT = 2025;
 
@@ -56,9 +58,9 @@ export async function analyzeImport(allSheets) {
 
   const [parcelles, placettes, emplacements, categories, existing] = await Promise.all([
 
-    base44.entities.Parcelle.list(), base44.entities.Placette.list(), base44.entities.Emplacement.list(),
+    Parcelle.list(), Placette.list(), Emplacement.list(),
 
-    base44.entities.CategorieNotation.filter({ active: true }), base44.entities.Notation.filter({ annee: YEAR_IMPORT }),
+    CategorieNotation.filter({ active: true }), Notation.filter({ annee: YEAR_IMPORT }),
 
   ]);
 
@@ -262,7 +264,7 @@ async function batchCreate(entity, records, size = 400) {
 
 export async function executeImport(analysis) {
 
-  const user = await base44.auth.me();
+  const user = await getCurrentUser();
 
   const { toImport } = analysis;
 
@@ -280,7 +282,7 @@ export async function executeImport(analysis) {
 
   }
 
-  const createdPlacettes = newPlMap.size ? await batchCreate(base44.entities.Placette, [...newPlMap.values()]) : [];
+  const createdPlacettes = newPlMap.size ? await batchCreate(Placette, [...newPlMap.values()]) : [];
 
   const placetteByRang = new Map(createdPlacettes.map(p => [`${p.parcelle_id}-${p.rang}`, p]));
 
@@ -298,7 +300,7 @@ export async function executeImport(analysis) {
 
   }
 
-  const createdEmps = newEmpMap.size ? await batchCreate(base44.entities.Emplacement, [...newEmpMap.values()]) : [];
+  const createdEmps = newEmpMap.size ? await batchCreate(Emplacement, [...newEmpMap.values()]) : [];
 
   const empByStable = new Map(createdEmps.map(e => [e.identifiant_stable, e]));
 
@@ -308,9 +310,9 @@ export async function executeImport(analysis) {
 
   for (const pid of pids) {
 
-    let p = (await base44.entities.Prospection.filter({ parcelle_id: pid, annee: YEAR_IMPORT }))[0];
+    let p = (await Prospection.filter({ parcelle_id: pid, annee: YEAR_IMPORT }))[0];
 
-    if (!p) p = await base44.entities.Prospection.create({ parcelle_id: pid, annee: YEAR_IMPORT, statut: "terminee", date_debut: new Date().toISOString(), date_fin: new Date().toISOString(), utilisateur_id: user.id, utilisateur_nom: user.full_name });
+    if (!p) p = await Prospection.create({ parcelle_id: pid, annee: YEAR_IMPORT, statut: "terminee", date_debut: new Date().toISOString(), date_fin: new Date().toISOString(), utilisateur_id: user.id, utilisateur_nom: user.full_name });
 
     pros[pid] = p;
 
@@ -326,7 +328,7 @@ export async function executeImport(analysis) {
 
   });
 
-  const created = await batchCreate(base44.entities.Notation, notations);
+  const created = await batchCreate(Notation, notations);
 
   return { notations: created.length, emplacementsCreated: createdEmps.length, placettesCreated: createdPlacettes.length };
 

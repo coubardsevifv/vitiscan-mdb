@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/base44Client";
 
 import { Button } from "@/components/ui/button";
 
@@ -16,9 +16,13 @@ import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
 
-  const [searchParams] = useSearchParams();
+  // Supabase's password-recovery link redirects back here with the session
 
-  const resetToken = searchParams.get("token");
+  // already established (see detectSessionInUrl in src/api/base44Client.js),
+
+  // so there's no token to read from the query string — just check for a session.
+
+  const [hasSession, setHasSession] = useState(null);
 
   const [newPassword, setNewPassword] = useState("");
 
@@ -27,6 +31,12 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+
+    supabase.auth.getSession().then(({ data: { session } }) => setHasSession(!!session));
+
+  }, []);
 
   const handleSubmit = async (e) => {
 
@@ -46,7 +56,9 @@ export default function ResetPassword() {
 
     try {
 
-      await base44.auth.resetPassword({ resetToken, newPassword });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) throw error;
 
       window.location.href = "/login";
 
@@ -62,7 +74,13 @@ export default function ResetPassword() {
 
   };
 
-  if (!resetToken) {
+  if (hasSession === null) {
+
+    return null;
+
+  }
+
+  if (!hasSession) {
 
     return (
 
