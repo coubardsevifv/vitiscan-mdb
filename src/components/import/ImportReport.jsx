@@ -62,6 +62,8 @@ export default function ImportReport({ analysis, onConfirm, onCancel }) {
 
         <Stat label="Doublons" value={stats.doublons} tone="err" />
 
+        <Stat label="Emplacements inexistants (x)" value={stats.nonExistants} tone="warn" />
+
       </div>
 
       {unknownParcelles.length > 0 && (

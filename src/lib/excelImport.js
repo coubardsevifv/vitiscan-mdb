@@ -52,6 +52,31 @@ function findLabelRow(rows, label) {
 
 }
 
+// Entre la ligne "N° du cep..." et la vraie grille de notation par cep, la
+// fiche a un bloc fixe de 15 lignes de synthèse (Sains, Morts, Absents...)
+// puis une ligne vide. On saute ce bloc au lieu de supposer que la grille
+// commence juste après "N° du cep...".
+function findMatrixStart(rows, debutRowIdx) {
+
+  let i = debutRowIdx + 1;
+
+  while (i < rows.length && String(rows[i]?.[0] ?? "").trim() !== "") i++;
+
+  return i + 1;
+
+}
+
+// Normalise un code brut (espaces autour de "+", casse) pour le faire
+// correspondre à la casse/l'écriture exacte d'une catégorie existante —
+// la saisie papier n'est pas toujours homogène ("REC+P" vs "REC + P").
+function normalizeCode(raw, canonicalByNormalized) {
+
+  const collapsed = raw.trim().replace(/\s*\+\s*/g, " + ").replace(/\s+/g, " ");
+
+  return canonicalByNormalized.get(collapsed.toLowerCase()) || collapsed;
+
+}
+
 export async function analyzeImport(allSheets) {
 
   const parcelleSheets = allSheets.filter(s => s.isParcelle);
@@ -66,6 +91,8 @@ export async function analyzeImport(allSheets) {
 
   const catCodes = new Set(categories.map(c => c.code));
 
+  const catCodesByNormalized = new Map(categories.map(c => [c.code.trim().replace(/\s*\+\s*/g, " + ").replace(/\s+/g, " ").toLowerCase(), c.code]));
+
   const errors = [];
 
   const s = {
@@ -76,7 +103,7 @@ export async function analyzeImport(allSheets) {
 
     emplacementsReconnus: 0, emplacementsNouveaux: 0,
 
-    notations: 0, valeursInconnues: 0, doublons: 0, donneesManquantes: 0,
+    notations: 0, valeursInconnues: 0, doublons: 0, donneesManquantes: 0, nonExistants: 0,
 
   };
 
@@ -96,7 +123,7 @@ export async function analyzeImport(allSheets) {
 
     if (rangRowIdx < 0 || debutRowIdx < 0) continue;
 
-    const matrixStart = debutRowIdx + 1;
+    const matrixStart = findMatrixStart(rows, debutRowIdx);
 
     const parcelleCode = String(rows[0]?.[2] || pSheet.name || "").trim();
 
@@ -158,13 +185,23 @@ export async function analyzeImport(allSheets) {
 
         if (rowIndex >= rows.length) break;
 
-        const col0 = String(rows[rowIndex]?.[0] || "").trim();
-
-        if (col0 !== "" && isNaN(Number(col0))) break;
+        // Colonne A : repère visuel ("1", "5"...) ou note libre ("CURETAGE")
+        // selon les fiches — jamais fiable pour détecter la fin de grille,
+        // on s'en tient au nombre d'emplacements de la placette.
 
         const rawVal = rows[rowIndex]?.[col];
 
         const empNumero = debutNum + i;
+
+        // "x" : la placette s'arrête avant les 50 emplacements nominaux —
+        // cet emplacement n'existe pas physiquement, rien à créer ni noter.
+        if (String(rawVal ?? "").trim().toLowerCase() === "x") {
+
+          s.nonExistants++;
+
+          continue;
+
+        }
 
         let emp;
 
@@ -188,7 +225,7 @@ export async function analyzeImport(allSheets) {
 
         const valStr = String(rawVal ?? "").trim();
 
-        const code = valStr === "" ? SAINE_CODE : valStr;
+        const code = valStr === "" ? SAINE_CODE : normalizeCode(valStr, catCodesByNormalized);
 
         if (!catCodes.has(code)) {
 
@@ -240,7 +277,7 @@ export async function analyzeImport(allSheets) {
 
       emplacementsReconnus: s.emplacementsReconnus, emplacementsNouveaux: s.emplacementsNouveaux,
 
-      notations: s.notations, valeursInconnues: s.valeursInconnues, doublons: s.doublons, donneesManquantes: s.donneesManquantes,
+      notations: s.notations, valeursInconnues: s.valeursInconnues, doublons: s.doublons, donneesManquantes: s.donneesManquantes, nonExistants: s.nonExistants,
 
     },
 
