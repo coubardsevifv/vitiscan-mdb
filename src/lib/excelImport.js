@@ -171,6 +171,16 @@ export async function analyzeImport(allSheets) {
 
     const rangUseCount = new Map();
 
+    // Numéro pour une placette créée à la volée (rang présent sur la fiche
+    // mais absent du fichier de placettes, ex. comptage vide à l'origine) :
+    // ne doit jamais réutiliser un numéro déjà pris par une vraie placette
+    // de cette parcelle, sous peine de générer le même identifiant_stable
+    // qu'elle pour d'autres emplacements.
+
+    const usedNumeros = new Set(placettes.filter(p => p.parcelle_id === parcelle.id).map(p => p.numero));
+
+    let nextSyntheticNumero = Math.max(0, ...usedNumeros) + 1;
+
     for (let col = 1; col < lastCol; col++) {
 
       const rang = rangRow[col];
@@ -202,7 +212,11 @@ export async function analyzeImport(allSheets) {
 
         s.placettesCreees++;
 
-        placette = { _new: true, parcelle_id: parcelle.id, numero: col, rang: rangStr, nombre_emplacements: 50, emplacement_debut: debutNum, emplacement_fin: debutNum + 49 };
+        const numero = nextSyntheticNumero++;
+
+        usedNumeros.add(numero);
+
+        placette = { _new: true, parcelle_id: parcelle.id, numero, rang: rangStr, nombre_emplacements: 50, emplacement_debut: debutNum, emplacement_fin: debutNum + 49 };
 
       } else {
 
