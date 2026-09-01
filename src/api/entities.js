@@ -9,17 +9,31 @@ function applySort(query, sort) {
   return query.order(column, { ascending: !descending });
 }
 
+// PostgREST caps a response at 1000 rows by default — several tables here
+// (emplacements, notations) comfortably exceed that. Page through with
+// .range() so list()/filter() always return every matching row.
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages(baseQuery) {
+  const rows = [];
+  let offset = 0;
+  for (;;) {
+    const { data, error } = await baseQuery.range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return rows;
+}
+
 function makeEntity(table) {
   return {
     async list(sort) {
-      const { data, error } = await applySort(supabase.from(table).select('*'), sort);
-      if (error) throw error;
-      return data;
+      return fetchAllPages(applySort(supabase.from(table).select('*'), sort));
     },
     async filter(match, sort) {
-      const { data, error } = await applySort(supabase.from(table).select('*').match(match), sort);
-      if (error) throw error;
-      return data;
+      return fetchAllPages(applySort(supabase.from(table).select('*').match(match), sort));
     },
     async get(id) {
       const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
