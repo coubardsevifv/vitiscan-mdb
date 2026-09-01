@@ -147,6 +147,30 @@ export async function analyzeImport(allSheets) {
 
     const lastCol = totauxCol > 0 ? totauxCol : rangRow.length;
 
+    // Un même rang peut apparaître deux fois sur la fiche (suite du rang sur
+    // une 2e colonne, ex. "SUITE RG") : la feuille corrigée a bien deux
+    // placettes distinctes pour ce rang. On les consomme dans l'ordre où
+    // elles apparaissent sur la feuille plutôt que de toujours reprendre la
+    // première trouvée.
+
+    const placettesByRang = new Map();
+
+    for (const p of placettes) {
+
+      if (p.parcelle_id !== parcelle.id) continue;
+
+      const key = String(p.rang);
+
+      if (!placettesByRang.has(key)) placettesByRang.set(key, []);
+
+      placettesByRang.get(key).push(p);
+
+    }
+
+    for (const list of placettesByRang.values()) list.sort((a, b) => a.numero - b.numero);
+
+    const rangUseCount = new Map();
+
     for (let col = 1; col < lastCol; col++) {
 
       const rang = rangRow[col];
@@ -157,13 +181,22 @@ export async function analyzeImport(allSheets) {
 
       const rangStr = String(rang).trim();
 
-      const debutNum = Number(debut) || 1;
+      const candidates = placettesByRang.get(rangStr) || [];
 
-      let placette = placettes.find(p => p.parcelle_id === parcelle.id && String(p.rang) === rangStr);
+      const useIdx = rangUseCount.get(rangStr) || 0;
 
-      if (!placette) placette = placettes.find(p => p.parcelle_id === parcelle.id && String(p.numero) === String(col));
+      rangUseCount.set(rangStr, useIdx + 1);
+
+      let placette = candidates[useIdx];
 
       const isNewPl = !placette;
+
+      // "N° du cep..." n'est pas fiable sur les colonnes de suite (souvent
+      // "SUITE RG" au lieu d'un numéro) — on préfère la vraie valeur de la
+      // placette déjà connue, et on ne retombe sur la feuille que pour une
+      // placette qu'on n'a encore jamais vue.
+
+      const debutNum = isNewPl ? (Number(debut) || 1) : placette.emplacement_debut;
 
       if (isNewPl) {
 
