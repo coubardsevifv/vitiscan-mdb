@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import { useAuth } from "@/lib/AuthContext";
 
-import { Upload, FileSpreadsheet, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
 
 import { parseWorkbook, analyzeImport, executeImport, YEAR_IMPORT } from "@/lib/excelImport";
 
@@ -132,15 +132,41 @@ export default function AdminImport() {
 
         <div className="rounded-xl border bg-white p-8 text-center">
 
-          <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-emerald-600" />
+          {result.failures.length > 0 ? (
 
-          <h2 className="text-xl font-black text-slate-900">Import terminé</h2>
+            <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-amber-500" />
 
-          <p className="mt-2 text-slate-600">{result.notations} notations importées pour la campagne {YEAR_IMPORT}.</p>
+          ) : (
+
+            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-emerald-600" />
+
+          )}
+
+          <h2 className="text-xl font-black text-slate-900">
+            {result.failures.length > 0 ? "Import partiellement terminé" : "Import terminé"}
+          </h2>
+
+          <p className="mt-2 text-slate-600">
+            {result.notations} / {result.expectedNotations} notations importées pour la campagne {YEAR_IMPORT}.
+          </p>
 
           {result.placettesCreated > 0 && <p className="text-sm text-slate-500">{result.placettesCreated} placettes créées.</p>}
 
           {result.emplacementsCreated > 0 && <p className="text-sm text-slate-500">{result.emplacementsCreated} emplacements créés.</p>}
+
+          {result.failures.length > 0 && (
+
+            <div className="mt-4 max-h-64 overflow-y-auto rounded-lg border border-amber-200 bg-amber-50 p-3 text-left">
+
+              <p className="mb-2 font-bold text-amber-800">{result.failures.length} lot(s) en échec — rien n'a été perdu, relancez l'import pour réessayer :</p>
+
+              {result.failures.map((f, i) => (
+                <p key={i} className="mb-1 text-sm text-amber-700">[{f.stage}] {f.message}</p>
+              ))}
+
+            </div>
+
+          )}
 
           <div className="mt-6 flex justify-center gap-3">
 

@@ -336,13 +336,34 @@ export async function analyzeImport(allSheets) {
 
 }
 
+// N'avale jamais une erreur : chaque chunk est tenté indépendamment, et un
+// chunk en échec est reporté (avec le message réel de Postgres/PostgREST)
+// sans bloquer les chunks suivants — avant, une seule ligne fautive dans un
+// chunk de 400 faisait échouer silencieusement tout le reste de l'import
+// (l'appelant ne voyait qu'un total plus bas que prévu, sans explication).
 async function batchCreate(entity, records, size = 400) {
 
   const out = [];
 
-  for (let i = 0; i < records.length; i += size) out.push(...await entity.bulkCreate(records.slice(i, i + size)));
+  const failures = [];
 
-  return out;
+  for (let i = 0; i < records.length; i += size) {
+
+    const chunk = records.slice(i, i + size);
+
+    try {
+
+      out.push(...await entity.bulkCreate(chunk));
+
+    } catch (err) {
+
+      failures.push({ chunkStart: i, chunkSize: chunk.length, message: err.message || String(err) });
+
+    }
+
+  }
+
+  return { out, failures };
 
 }
 
@@ -352,13 +373,20 @@ export async function executeImport(analysis) {
 
   const { toImport } = analysis;
 
+  const failures = [];
+
+  // Clé par numéro (unique par construction, cf. analyzeImport) et non par
+  // rang : un même rang peut avoir deux placettes nouvelles distinctes
+  // (suite du rang sur 2 colonnes) — les indexer par rang les confondait en
+  // une seule, et la moitié des notations perdaient leur placette_id.
+
   const newPlMap = new Map();
 
   for (const item of toImport) {
 
     if (item.placette._new) {
 
-      const key = `${item.placette.parcelle_id}-${item.placette.rang}`;
+      const key = `${item.placette.parcelle_id}-${item.placette.numero}`;
 
       if (!newPlMap.has(key)) newPlMap.set(key, { parcelle_id: item.placette.parcelle_id, numero: item.placette.numero, rang: item.placette.rang, nombre_emplacements: item.placette.nombre_emplacements, emplacement_debut: item.placette.emplacement_debut, emplacement_fin: item.placette.emplacement_fin });
 
@@ -366,9 +394,11 @@ export async function executeImport(analysis) {
 
   }
 
-  const createdPlacettes = newPlMap.size ? await batchCreate(Placette, [...newPlMap.values()]) : [];
+  const { out: createdPlacettes, failures: placetteFailures } = newPlMap.size ? await batchCreate(Placette, [...newPlMap.values()]) : { out: [], failures: [] };
 
-  const placetteByRang = new Map(createdPlacettes.map(p => [`${p.parcelle_id}-${p.rang}`, p]));
+  failures.push(...placetteFailures.map(f => ({ stage: "placettes", ...f })));
+
+  const placetteByKey = new Map(createdPlacettes.map(p => [`${p.parcelle_id}-${p.numero}`, p]));
 
   const newEmpMap = new Map();
 
@@ -376,7 +406,7 @@ export async function executeImport(analysis) {
 
     if (item.emplacement._new && !newEmpMap.has(item.emplacement.identifiant_stable)) {
 
-      const plId = item.placette._new ? placetteByRang.get(`${item.placette.parcelle_id}-${item.placette.rang}`)?.id : item.placette.id;
+      const plId = item.placette._new ? placetteByKey.get(`${item.placette.parcelle_id}-${item.placette.numero}`)?.id : item.placette.id;
 
       newEmpMap.set(item.emplacement.identifiant_stable, { parcelle_id: item.parcelle.id, placette_id: plId, numero: item.emplacement.numero, identifiant_stable: item.emplacement.identifiant_stable });
 
@@ -384,36 +414,69 @@ export async function executeImport(analysis) {
 
   }
 
-  const createdEmps = newEmpMap.size ? await batchCreate(Emplacement, [...newEmpMap.values()]) : [];
+  const { out: createdEmps, failures: empFailures } = newEmpMap.size ? await batchCreate(Emplacement, [...newEmpMap.values()]) : { out: [], failures: [] };
+
+  failures.push(...empFailures.map(f => ({ stage: "emplacements", ...f })));
 
   const empByStable = new Map(createdEmps.map(e => [e.identifiant_stable, e]));
 
   const pids = [...new Set(toImport.map(i => i.parcelle.id))];
 
+  // Une Prospection en échec pour UNE parcelle ne doit pas faire avorter
+  // l'import de toutes les autres — sans ce try/catch, une exception ici
+  // sortait de la fonction avant même d'atteindre les emplacements/
+  // notations des parcelles suivantes.
+
   const pros = {};
 
   for (const pid of pids) {
 
-    let p = (await Prospection.filter({ parcelle_id: pid, annee: YEAR_IMPORT }))[0];
+    try {
 
-    if (!p) p = await Prospection.create({ parcelle_id: pid, annee: YEAR_IMPORT, statut: "terminee", date_debut: new Date().toISOString(), date_fin: new Date().toISOString(), utilisateur_id: user.id, utilisateur_nom: user.full_name });
+      let p = (await Prospection.filter({ parcelle_id: pid, annee: YEAR_IMPORT }))[0];
 
-    pros[pid] = p;
+      if (!p) p = await Prospection.create({ parcelle_id: pid, annee: YEAR_IMPORT, statut: "terminee", date_debut: new Date().toISOString(), date_fin: new Date().toISOString(), utilisateur_id: user.id, utilisateur_nom: user.full_name });
+
+      pros[pid] = p;
+
+    } catch (err) {
+
+      failures.push({ stage: "prospections", chunkSize: 1, message: `Prospection ${pid}: ${err.message || err}` });
+
+    }
 
   }
 
-  const notations = toImport.map(i => {
+  // Valider avant d'envoyer à Postgres plutôt que de laisser une ligne avec
+  // un placette_id/emplacement_id manquant (undefined -> colonne omise de
+  // l'INSERT -> NOT NULL violation) faire échouer tout son chunk de 400.
 
-    const plId = i.placette._new ? placetteByRang.get(`${i.placette.parcelle_id}-${i.placette.rang}`)?.id : i.placette.id;
+  const notations = [];
+
+  for (const i of toImport) {
+
+    const plId = i.placette._new ? placetteByKey.get(`${i.placette.parcelle_id}-${i.placette.numero}`)?.id : i.placette.id;
 
     const empId = i.emplacement.id || empByStable.get(i.emplacement.identifiant_stable)?.id;
 
-    return { prospection_id: pros[i.parcelle.id].id, parcelle_id: i.parcelle.id, placette_id: plId, emplacement_id: empId, numero_emplacement: i.emplacement.numero, rang: i.placette.rang, annee: YEAR_IMPORT, code: i.code, utilisateur_id: user.id, utilisateur_nom: user.full_name, date_saisie: new Date().toISOString(), hors_ligne: false };
+    const prospectionId = pros[i.parcelle.id]?.id;
 
-  });
+    if (!plId || !empId || !prospectionId) {
 
-  const created = await batchCreate(Notation, notations);
+      failures.push({ stage: "notations", chunkSize: 1, message: `placette_id/emplacement_id/prospection_id manquant pour ${i.sheet} L${i.row} (emp ${i.emplacement.numero})` });
 
-  return { notations: created.length, emplacementsCreated: createdEmps.length, placettesCreated: createdPlacettes.length };
+      continue;
+
+    }
+
+    notations.push({ prospection_id: prospectionId, parcelle_id: i.parcelle.id, placette_id: plId, emplacement_id: empId, numero_emplacement: i.emplacement.numero, rang: i.placette.rang, annee: YEAR_IMPORT, code: i.code, utilisateur_id: user.id, utilisateur_nom: user.full_name, date_saisie: new Date().toISOString(), hors_ligne: false });
+
+  }
+
+  const { out: created, failures: notationFailures } = await batchCreate(Notation, notations);
+
+  failures.push(...notationFailures.map(f => ({ stage: "notations", ...f })));
+
+  return { notations: created.length, expectedNotations: toImport.length, emplacementsCreated: createdEmps.length, placettesCreated: createdPlacettes.length, failures };
 
 }
