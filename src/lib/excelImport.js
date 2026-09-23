@@ -32,7 +32,11 @@ export async function parseWorkbook(file) {
 
     const sheet = wb.Sheets[name];
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: false });
+    // blankrows:true (jamais false) — la grille de notation a énormément de
+    // lignes entièrement vides (un cep "Sain" sur les 6 rangs à la fois),
+    // et sauter ces lignes désaligne tout calcul basé sur le numéro de
+    // ligne (matrixStart, empNumero...) pour tout le reste de la feuille.
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", blankrows: true });
 
     return { name, rows, isParcelle: isParcelleSheet(rows) };
 
@@ -153,17 +157,6 @@ export async function analyzeImport(allSheets) {
     if (parcelleValue === undefined || String(parcelleValue).trim() === "") continue;
 
     const matrixStart = findMatrixStart(rows, debutRowIdx);
-
-    if (pSheet.name === "77 FLEIRI") {
-
-      errors.push({
-        sheet: pSheet.name, row: matrixStart + 1, type: "debug",
-        message: `DEBUG rangRowIdx=${rangRowIdx} debutRowIdx=${debutRowIdx} matrixStart=${matrixStart} `
-          + `row[matrixStart]=${JSON.stringify(rows[matrixStart])} row[matrixStart+1]=${JSON.stringify(rows[matrixStart + 1])} `
-          + `row[matrixStart+2]=${JSON.stringify(rows[matrixStart + 2])}`,
-      });
-
-    }
 
     const parcelleCode = String(parcelleValue || pSheet.name || "").trim();
 
@@ -313,16 +306,6 @@ export async function analyzeImport(allSheets) {
         const valStr = String(rawVal ?? "").trim();
 
         const code = valStr === "" ? SAINE_CODE : normalizeCode(valStr, catCodesByNormalized);
-
-        if (pSheet.name === "77 FLEIRI" && i === 0) {
-
-          errors.push({
-            sheet: pSheet.name, row: rowIndex + 1, type: "debug",
-            message: `DEBUG col=${col} rang=${rangStr} placette.numero=${placette.numero} placette.id=${placette.id} `
-              + `debutNum=${debutNum} empNumero=${empNumero} isNewEmp=${isNewEmp} emp.id=${emp.id} rawVal=${JSON.stringify(rawVal)} code=${code}`,
-          });
-
-        }
 
         if (!catCodes.has(code)) {
 
