@@ -154,6 +154,17 @@ export async function analyzeImport(allSheets) {
 
     const matrixStart = findMatrixStart(rows, debutRowIdx);
 
+    if (pSheet.name === "77 FLEIRI") {
+
+      errors.push({
+        sheet: pSheet.name, row: matrixStart + 1, type: "debug",
+        message: `DEBUG rangRowIdx=${rangRowIdx} debutRowIdx=${debutRowIdx} matrixStart=${matrixStart} `
+          + `row[matrixStart]=${JSON.stringify(rows[matrixStart])} row[matrixStart+1]=${JSON.stringify(rows[matrixStart + 1])} `
+          + `row[matrixStart+2]=${JSON.stringify(rows[matrixStart + 2])}`,
+      });
+
+    }
+
     const parcelleCode = String(parcelleValue || pSheet.name || "").trim();
 
     const parcelle = parcelles.find(p => p.identifiant === parcelleCode || p.identifiant === pSheet.name);
@@ -302,6 +313,16 @@ export async function analyzeImport(allSheets) {
         const valStr = String(rawVal ?? "").trim();
 
         const code = valStr === "" ? SAINE_CODE : normalizeCode(valStr, catCodesByNormalized);
+
+        if (pSheet.name === "77 FLEIRI" && i === 0) {
+
+          errors.push({
+            sheet: pSheet.name, row: rowIndex + 1, type: "debug",
+            message: `DEBUG col=${col} rang=${rangStr} placette.numero=${placette.numero} placette.id=${placette.id} `
+              + `debutNum=${debutNum} empNumero=${empNumero} isNewEmp=${isNewEmp} emp.id=${emp.id} rawVal=${JSON.stringify(rawVal)} code=${code}`,
+          });
+
+        }
 
         if (!catCodes.has(code)) {
 
