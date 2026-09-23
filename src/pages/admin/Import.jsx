@@ -80,6 +80,10 @@ export default function AdminImport() {
 
       </div>
 
+      <div className="mb-4 rounded-lg border-2 border-fuchsia-500 bg-fuchsia-50 p-3 text-center text-sm font-black text-fuchsia-700">
+        VERSION DEBUG-FLEIRI-v2 — si tu ne vois pas ce bandeau rose, tu n'es pas sur la dernière version.
+      </div>
+
       {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       {step === "upload" && (
