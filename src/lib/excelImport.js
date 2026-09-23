@@ -158,6 +158,12 @@ export async function analyzeImport(allSheets) {
 
     const matrixStart = findMatrixStart(rows, debutRowIdx);
 
+    if (pSheet.name === "77 FLEIRI") {
+
+      errors.push({ sheet: pSheet.name, row: 1, type: "debug", message: `BUILD-CHECK-v3 rangRowIdx=${rangRowIdx} matrixStart=${matrixStart} cep1=${JSON.stringify(rows[matrixStart]?.[1])}` });
+
+    }
+
     const parcelleCode = String(parcelleValue || pSheet.name || "").trim();
 
     const parcelle = parcelles.find(p => p.identifiant === parcelleCode || p.identifiant === pSheet.name);
