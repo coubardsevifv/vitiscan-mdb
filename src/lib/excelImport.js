@@ -52,6 +52,27 @@ function findLabelRow(rows, label) {
 
 }
 
+// Valeur en face du libellé "Parcelle :" (à ne pas confondre avec le
+// numéro de ligne "N° de rang" cherché par findLabelRow — ce label peut
+// être sur n'importe quelle colonne, pas seulement la première).
+function findParcelleValue(rows) {
+
+  for (let i = 0; i < Math.min(rows.length, 10); i++) {
+
+    const row = rows[i] || [];
+
+    for (let c = 0; c < row.length; c++) {
+
+      if (String(row[c] || "").toLowerCase().includes("parcelle")) return row[c + 1];
+
+    }
+
+  }
+
+  return undefined;
+
+}
+
 // Entre la ligne "N° du cep..." et la vraie grille de notation par cep, la
 // fiche a un bloc fixe de 15 lignes de synthèse (Sains, Morts, Absents...)
 // puis une ligne vide. On saute ce bloc au lieu de supposer que la grille
@@ -123,9 +144,17 @@ export async function analyzeImport(allSheets) {
 
     if (rangRowIdx < 0 || debutRowIdx < 0) continue;
 
+    // Un modèle de fiche vierge (ex. l'onglet "vierge") a la même mise en
+    // page qu'une vraie fiche mais aucune valeur "Parcelle :" — ce n'est
+    // pas une parcelle inconnue à signaler, il n'y a juste rien à importer.
+
+    const parcelleValue = findParcelleValue(rows);
+
+    if (parcelleValue === undefined || String(parcelleValue).trim() === "") continue;
+
     const matrixStart = findMatrixStart(rows, debutRowIdx);
 
-    const parcelleCode = String(rows[0]?.[2] || pSheet.name || "").trim();
+    const parcelleCode = String(parcelleValue || pSheet.name || "").trim();
 
     const parcelle = parcelles.find(p => p.identifiant === parcelleCode || p.identifiant === pSheet.name);
 
