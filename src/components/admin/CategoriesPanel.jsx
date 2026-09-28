@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { CategorieNotation } from "@/api/entities";
 import { importCategoriesFile } from "@/lib/categoriesImport";
 
@@ -34,6 +35,17 @@ export default function CategoriesPanel() {
     } finally {
       setImporting(false);
     }
+  };
+
+  const updateField = (c, field, value) => {
+    if (value === "" || value === c[field]) return;
+    CategorieNotation.update(c.id, { [field]: value }).then(load);
+  };
+
+  const remove = async (c) => {
+    if (!window.confirm(`Supprimer la catégorie "${c.code}" ? Les notations déjà saisies avec ce code resteront inchangées, mais n'afficheront plus de couleur ni de libellé.`)) return;
+    await CategorieNotation.delete(c.id);
+    load();
   };
 
   return (
@@ -75,17 +87,68 @@ export default function CategoriesPanel() {
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        {rows.map((c) => (
-          <div key={c.id} className="flex items-center gap-3 rounded-xl border p-3">
-            <input type="color" value={c.couleur} onChange={(e) => CategorieNotation.update(c.id, { couleur: e.target.value }).then(load)} className="h-9 w-9" />
-            <div className="flex-1">
-              <b>{c.code}</b>
-              <p className="text-xs text-slate-500">{c.libelle}</p>
-            </div>
-            <button onClick={() => CategorieNotation.update(c.id, { active: !c.active }).then(load)} className="text-xs font-semibold text-slate-500">{c.active ? "Actif" : "Inactif"}</button>
-          </div>
-        ))}
+      <div className="overflow-x-auto rounded-xl border bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+              <th className="p-3">Couleur</th>
+              <th className="p-3">Code</th>
+              <th className="p-3">Libellé</th>
+              <th className="p-3">Ordre</th>
+              <th className="p-3">Statut</th>
+              <th className="p-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-b last:border-0">
+                <td className="p-2">
+                  <input
+                    type="color"
+                    value={c.couleur}
+                    onChange={(e) => updateField(c, "couleur", e.target.value)}
+                    className="h-9 w-9 cursor-pointer"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    defaultValue={c.code}
+                    onBlur={(e) => updateField(c, "code", e.target.value.trim())}
+                    className="h-9 w-28 rounded-lg border px-2 font-bold"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    defaultValue={c.libelle}
+                    onBlur={(e) => updateField(c, "libelle", e.target.value.trim())}
+                    className="h-9 w-full min-w-40 rounded-lg border px-2"
+                  />
+                </td>
+                <td className="p-2">
+                  <input
+                    type="number"
+                    defaultValue={c.ordre}
+                    onBlur={(e) => updateField(c, "ordre", Number(e.target.value))}
+                    className="h-9 w-16 rounded-lg border px-2"
+                  />
+                </td>
+                <td className="p-2">
+                  <button
+                    onClick={() => CategorieNotation.update(c.id, { active: !c.active }).then(load)}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${c.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    {c.active ? "Actif" : "Inactif"}
+                  </button>
+                </td>
+                <td className="p-2">
+                  <button onClick={() => remove(c)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Supprimer">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       {!rows.length && <p className="py-8 text-center text-slate-500">Aucune catégorie. Ajoutez-en une ou importez un fichier.</p>}
     </div>
