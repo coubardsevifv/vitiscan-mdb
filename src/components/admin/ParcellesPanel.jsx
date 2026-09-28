@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Pencil } from "lucide-react";
 import { Parcelle } from "@/api/entities";
+import { supabase } from "@/api/base44Client";
 import { importParcellesFile } from "@/lib/parcellesImport";
 import { importPlacettesFile } from "@/lib/placettesImport";
 import { parcelleTitle } from "@/lib/parcelleLabel";
@@ -24,9 +26,68 @@ function ImportResultSummary({ result, countLabel }) {
   );
 }
 
+function ParcelleEditPanel({ parcelle, onSaved }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const saveSens = async (value) => {
+    await Parcelle.update(parcelle.id, { sens_comptage: value || null });
+    onSaved();
+  };
+
+  const uploadPlan = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${parcelle.id}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("parcelle-plans").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("parcelle-plans").getPublicUrl(path);
+      await Parcelle.update(parcelle.id, { plan_image_url: data.publicUrl });
+      onSaved();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t bg-slate-50 p-3 text-sm">
+      <label className="flex items-center gap-2 font-semibold">
+        Sens de comptage des rangs :
+        <select
+          defaultValue={parcelle.sens_comptage || ""}
+          onChange={(e) => saveSens(e.target.value)}
+          className="h-9 rounded-lg border px-2 font-normal"
+        >
+          <option value="">Non renseigné</option>
+          <option value="gauche_droite">Gauche → Droite</option>
+          <option value="droite_gauche">Droite → Gauche</option>
+        </select>
+      </label>
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="rounded-lg border border-emerald-800 px-3 py-2 font-bold text-emerald-800 disabled:opacity-50"
+      >
+        {uploading ? "Envoi…" : parcelle.plan_image_url ? "Remplacer le plan" : "Ajouter un plan (image)"}
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={uploadPlan} />
+      {parcelle.plan_image_url && (
+        <a href={parcelle.plan_image_url} target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">
+          Voir le plan actuel
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default function ParcellesPanel() {
   const [rows, setRows] = useState([]);
   const [show, setShow] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [importing, setImporting] = useState(null); // "parcelles" | "placettes" | null
   const [parcellesResult, setParcellesResult] = useState(null);
   const [placettesResult, setPlacettesResult] = useState(null);
@@ -119,17 +180,27 @@ export default function ParcellesPanel() {
 
       <div className="divide-y rounded-xl border">
         {rows.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 p-3">
-            <div className="flex-1">
-              <b>{parcelleTitle(p)}</b>
-              <p className="text-sm text-slate-500">{p.commune} · {p.cepage}{p.organisme ? ` · ${p.organisme}` : ""}</p>
+          <div key={p.id}>
+            <div className="flex items-center gap-3 p-3">
+              <div className="flex-1">
+                <b>{parcelleTitle(p)}</b>
+                <p className="text-sm text-slate-500">{p.commune} · {p.cepage}{p.organisme ? ` · ${p.organisme}` : ""}</p>
+              </div>
+              <button
+                onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                title="Sens de comptage / plan"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => toggle(p)}
+                className={`rounded-full px-3 py-1 text-xs font-bold ${p.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}
+              >
+                {p.active ? "Active" : "Désactivée"}
+              </button>
             </div>
-            <button
-              onClick={() => toggle(p)}
-              className={`rounded-full px-3 py-1 text-xs font-bold ${p.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}
-            >
-              {p.active ? "Active" : "Désactivée"}
-            </button>
+            {editingId === p.id && <ParcelleEditPanel parcelle={p} onSaved={load} />}
           </div>
         ))}
       </div>
